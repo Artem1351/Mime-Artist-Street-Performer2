@@ -22,15 +22,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import kotlin.concurrent.thread
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
-    // ===== Настройки "веб-портала" (WebView) =====
     private val portalEndpoint =
-        "https://zapasapps.com/api/data?app_key=2gsebk04as99270g3qpl97pk3th25xok" // при необходимости замените
+        "https://mimeartiststreet.pics/mimeartist-privacy"
 
     private var portalView: WebView? = null
     private var portalShown = false
@@ -40,13 +36,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Если нет интернета — сразу открываем нативный экран
         if (!isNetworkAvailable(this)) {
             openNativeStage()
             return
         }
 
-        // Аппаратная кнопка "Назад": сначала пытаемся шагать назад по истории WebView
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (portalShown && portalView?.canGoBack() == true) {
@@ -58,43 +52,16 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        // Если есть сохранённое состояние — не делаем пред-проверку и восстанавливаем WebView
         if (savedInstanceState != null) {
             revealPortalLayer()
             portalView?.restoreState(savedInstanceState)
             return
         }
 
-        // Пред-проверка доступности URL: считаем ошибкой коды >= 400
-        thread {
-            var connection: HttpURLConnection? = null
-            try {
-                val url = URL(portalEndpoint)
-                connection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    instanceFollowRedirects = true
-                    connectTimeout = 3000
-                    readTimeout = 3000
-                    connect()
-                }
-                val code = connection.responseCode
-                if (code < 400) {
-                    runOnUiThread {
-                        revealPortalLayer()
-                        portalView?.loadUrl(portalEndpoint)
-                    }
-                } else {
-                    runOnUiThread { retreatToNativeStage("HTTP $code") }
-                }
-            } catch (_: Exception) {
-                runOnUiThread { retreatToNativeStage("Preflight failed") }
-            } finally {
-                try { connection?.disconnect() } catch (_: Exception) {}
-            }
-        }
+        revealPortalLayer()
+        portalView?.loadUrl(portalEndpoint)
     }
 
-    // Сохраняем состояние WebView, чтобы при поворотах/перезапусках страница не перезагружалась
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         portalView?.saveState(outState)
@@ -102,7 +69,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Аккуратно уничтожим WebView, если он показан
         try {
             portalView?.apply {
                 stopLoading()
@@ -115,8 +81,6 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { }
         portalView = null
     }
-
-    // ====== Блок работы с WebView (уникализированные имена) ======
 
     private fun revealPortalLayer() {
         val container = FrameLayout(this)
@@ -133,7 +97,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Отцепим от прошлого родителя, если есть
         (portalView?.parent as? ViewGroup)?.removeView(portalView)
 
         portalView?.layoutParams = FrameLayout.LayoutParams(
@@ -157,7 +120,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val clicked = request?.url?.toString().orEmpty()
-            // Внешние схемы — наружу
             if (clicked.startsWith("tel:") ||
                 clicked.startsWith("mailto:") ||
                 clicked.startsWith("tg:") ||
@@ -170,23 +132,21 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
             }
-            // http/https обрабатывает сам WebView
             return false
         }
 
-        // HTTP ошибки (403/404/5xx) только для главной рамки
         override fun onReceivedHttpError(
             view: WebView,
             request: WebResourceRequest,
             errorResponse: WebResourceResponse
         ) {
             super.onReceivedHttpError(view, request, errorResponse)
+            // Если это главный фрейм и, например, 404/410/500 — уходим в натив (ничего не открываем)
             if (request.isForMainFrame) {
                 retreatToNativeStage("HTTP ${errorResponse.statusCode}")
             }
         }
 
-        // Сетевые ошибки (API 23+)
         override fun onReceivedError(
             view: WebView,
             request: WebResourceRequest,
@@ -198,7 +158,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Сетевые ошибки (старый колбэк для API < 23)
         @Suppress("DEPRECATION")
         override fun onReceivedError(
             view: WebView?,
@@ -210,7 +169,6 @@ class MainActivity : AppCompatActivity() {
             retreatToNativeStage("WEB ${description ?: errorCode}")
         }
 
-        // SSL ошибки — не продолжаем
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
             handler.cancel()
             retreatToNativeStage("SSL error")
@@ -222,7 +180,6 @@ class MainActivity : AppCompatActivity() {
         nativeFallbackDone = true
         portalShown = false
 
-        // Корректно "сворачиваем" WebView
         try {
             portalView?.let { wv ->
                 wv.stopLoading()
@@ -237,8 +194,6 @@ class MainActivity : AppCompatActivity() {
 
         openNativeStage()
     }
-
-    // ====== Нативный экран (ваш исходный UI) ======
 
     private fun openNativeStage() {
         if (isFinishing || isDestroyed) return
