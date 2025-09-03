@@ -1,0 +1,137 @@
+# Codemagic build file for Native Android (Kotlin)
+#
+# Этот файл содержит два workflow:
+# 1. android-build-final: Всегда создает новый ключ для каждой сборки.
+# 2. android-build-with-existing-key: Использует существующий ключ из вашего репозитория.
+#
+workflows:
+  # --- WORKFLOW 1: ВСЕГДА СОЗДАЕТ НОВЫЙ КЛЮЧ ---
+  android-build-final:
+    name: Android Build (Generate New Key)
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        PACKAGE_NAME: "com.galactic.mimeartiststreetperformer"
+        KEYSTORE_PASSWORD: "123321"
+        KEY_ALIAS: "key0"
+        KEY_ALIAS_PASSWORD: "123321"
+        KEYSTORE_PATH: "$CM_BUILD_DIR/Mimeartiststreetperformer.jks"
+    scripts:
+      - name: Установить локальные свойства
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+      - name: Принудительно создать новый JKS ключ
+        script: |
+          echo "ℹ️ Удаляю старый keystore, если он существует..."
+          rm -f $KEYSTORE_PATH
+          echo "⚙️ Создаю новый JKS ключ..."
+          keytool -genkey -v \
+            -keystore $KEYSTORE_PATH \
+            -alias $KEY_ALIAS \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_ALIAS_PASSWORD" \
+            -dname "CN=Codemagic, OU=CI, O=Codemagic, L=Tallinn, S=Harjumaa, C=EE"
+          echo "✅ Новый Keystore успешно создан."
+      - name: Дать права на выполнение gradlew
+        script: |
+          chmod +x ./gradlew
+      - name: Сборка APK и AAB с ручной подписью
+        script: |
+          ./gradlew assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_ALIAS_PASSWORD"
+      - name: Сгенерировать инфо-файл и собрать ZIP
+        script: |
+          KEYSTORE_FILENAME=$(basename $KEYSTORE_PATH)
+          VERSION_CODE=$BUILD_NUMBER
+          VERSION_NAME="1.0.$BUILD_NUMBER"
+          {
+            echo "=== Keystore & Build Info ==="
+            echo "File: $KEYSTORE_FILENAME"
+            echo "Alias: $KEY_ALIAS"
+            echo "Keystore Password: $KEYSTORE_PASSWORD"
+            echo "Key Password: $KEY_ALIAS_PASSWORD"
+            echo "Package: $PACKAGE_NAME"
+            echo "VersionCode: $VERSION_CODE"
+            echo "VersionName: $VERSION_NAME"
+            echo "Build Date: $(date)"
+          } > build_info.txt
+          zip -r all_artifacts.zip \
+            app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/bundle/release/app-release.aab \
+            $KEYSTORE_PATH \
+            build_info.txt
+    artifacts:
+      - app/build/outputs/apk/release/app-release.apk
+      - app/build/outputs/bundle/release/app-release.aab
+      - $KEYSTORE_PATH
+      - build_info.txt
+      - all_artifacts.zip
+
+  # --- WORKFLOW 2: ИСПОЛЬЗУЕТ СУЩЕСТВУЮЩИЙ КЛЮЧ (НЕБЕЗОПАСНО) ---
+  android-build-with-existing-key:
+    name: Android Build (Use Existing Key)
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        PACKAGE_NAME: "com.galactic.mimeartiststreetperformer"
+        KEYSTORE_PASSWORD: "123321"
+        KEY_ALIAS: "key0"
+        KEY_ALIAS_PASSWORD: "123321"
+        # Путь к ключу в вашем репозитории.
+        KEYSTORE_PATH: "$CM_BUILD_DIR/Mimeartiststreetperformer.jks"
+    scripts:
+      - name: Установить локальные свойства
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+      - name: Проверить наличие ключа
+        script: |
+          # Этот шаг просто проверяет, что ключ на месте. Если его нет, сборка упадет.
+          if [ -f "$KEYSTORE_PATH" ]; then
+            echo "✅ Существующий Keystore найден в репозитории."
+          else
+            echo "❌ ОШИБКА: Keystore не найден по пути $KEYSTORE_PATH. Убедитесь, что вы добавили его в репозиторий."
+            exit 1
+          fi
+      - name: Дать права на выполнение gradlew
+        script: |
+          chmod +x ./gradlew
+      - name: Сборка APK и AAB с ручной подписью
+        script: |
+          ./gradlew assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_ALIAS_PASSWORD"
+      - name: Сгенерировать инфо-файл и собрать ZIP
+        script: |
+          KEYSTORE_FILENAME=$(basename $KEYSTORE_PATH)
+          VERSION_CODE=$BUILD_NUMBER
+          VERSION_NAME="1.0.$BUILD_NUMBER"
+          {
+            echo "=== Keystore & Build Info ==="
+            echo "File: $KEYSTORE_FILENAME"
+            echo "Alias: $KEY_ALIAS"
+            echo "Keystore Password: $KEYSTORE_PASSWORD"
+            echo "Key Password: $KEY_ALIAS_PASSWORD"
+            echo "Package: $PACKAGE_NAME"
+            echo "VersionCode: $VERSION_CODE"
+            echo "VersionName: $VERSION_NAME"
+            echo "Build Date: $(date)"
+          } > build_info.txt
+          zip -r all_artifacts.zip \
+            app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/bundle/release/app-release.aab \
+            $KEYSTORE_PATH \
+            build_info.txt
+    artifacts:
+      - app/build/outputs/apk/release/app-release.apk
+      - app/build/outputs/bundle/release/app-release.aab
+      - $KEYSTORE_PATH
+      - build_info.txt
+      - all_artifacts.zip

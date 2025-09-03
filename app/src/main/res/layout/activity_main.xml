@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/streetPerformerScene"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/backgroundImageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/mime_artist_stage_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="@string/app_name" />
+
+    <ImageView
+        android:id="@+id/animatedPinImage"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:layout_marginBottom="24dp"
+        android:contentDescription="Animated bowling pin"
+        android:src="@drawable/bowling_pin"
+        app:layout_constraintBottom_toTopOf="@+id/mimeArtistActionGroup"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/backgroundImageView" />
+
+    <LinearLayout
+        android:id="@+id/mimeArtistActionGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.85">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/buttonTugboat"
+            android:layout_width="275dp"
+            android:layout_height="70dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/performer_button_canvas"
+            android:fontFamily="@font/mime_artist_script"
+            android:gravity="center"
+            android:stateListAnimator="@animator/performer_press_effect"
+            android:text="Tugboat"
+            android:textColor="@android:color/white"
+            android:textSize="26sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/buttonLadder"
+            android:layout_width="275dp"
+            android:layout_height="70dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/performer_button_canvas"
+            android:fontFamily="@font/mime_artist_script"
+            android:gravity="center"
+            android:stateListAnimator="@animator/performer_press_effect"
+            android:text="Ladder"
+            android:textColor="@android:color/white"
+            android:textSize="26sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/buttonInvisibleWall"
+            android:layout_width="275dp"
+            android:layout_height="100dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/performer_button_canvas"
+            android:fontFamily="@font/mime_artist_script"
+            android:gravity="center"
+            android:stateListAnimator="@animator/performer_press_effect"
+            android:text="Invisible Wall"
+            android:textColor="@android:color/white"
+            android:textSize="26sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
